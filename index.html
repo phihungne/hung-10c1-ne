@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nhấp vô là có xiền 🤑</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family: Arial, sans-serif;
+  height:100vh;
+  overflow:hidden;
+  background: linear-gradient(135deg, #ff9ac3, #ffc6e2, #ffe1f0, #ffb3d1);
+  background-size:400% 400%;
+  animation: gradientBG 15s ease infinite;
+  display:flex; flex-direction:column; align-items:center;
+  position:relative;
+}
+@keyframes gradientBG{
+  0%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+  100%{background-position:0% 50%;}
+}
+h1{color:#ff4d6d;font-size:40px;text-align:center;margin-top:30px;transition:1s;}
+button{
+  padding:10px 20px; border:none; border-radius:0;
+  background:#ff4d6d; color:#fff; cursor:pointer; font-size:16px; margin:5px;
+  transition:0.3s;
+}
+button:hover{transform:scale(1.1);}
+#introDiv{text-align:center;margin-top:50px;}
+#gameDiv{text-align:center;display:none;}
+#diceArea{position:relative;height:100px;margin:20px;}
+#scoreBox,#moneyBox,#healthBox{margin-top:10px;font-size:18px;}
+#shopModal,#rulesModal{
+  display:none; position:fixed; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width:80%; max-width:400px; background:#fff0f5; border:2px solid #ff99b3;
+  border-radius:15px; padding:15px; z-index:1000;
+}
+#shopModal h3,#rulesModal h3{margin-bottom:10px; color:#ff4d6d;}
+.shopItem{border:1px solid #ff99b3; border-radius:10px;
+padding:5px; margin:5px; display:inline-block; cursor:pointer; background:#fff0f5;}
+.shopItem:hover{transform:scale(1.05);}
+#closeShop,#closeRules{
+  position:absolute; top:5px; right:10px; font-size:20px; cursor:pointer; color:#ff4d6d; font-weight:bold;
+}
+#openShopBtn,#openRulesBtn{
+  position:fixed; top:50%; right:20px; transform:translateY(-50%);
+  font-size:30px; border:none; border-radius:50%; padding:15px;
+  background:#ff99b3; color:#fff; cursor:pointer;
+}
+#openShopBtn:hover,#openRulesBtn:hover{transform:scale(1.2);}
+#gameOverModal{
+  display:none; position:fixed; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  background:#ff4d6d; color:#fff;
+  padding:30px 50px; border-radius:0; font-size:30px;
+  font-weight:bold; text-align:center; box-shadow:0 0 20px rgba(0,0,0,0.5);
+}
+#signatureFixed{
+  position:fixed; bottom:10px; left:10px;
+  font-size:16px; color:#ff4d6d; font-weight:bold; white-space:nowrap;
+}
+.icon{
+  position:absolute; font-size:40px; cursor:pointer; transition:0.2s;
+}
+.lostPoint{
+  color:red; font-size:24px; font-weight:bold; position:absolute; z-index:2000;
+  animation:popUp 1s ease forwards;
+}
+@keyframes popUp{
+  0%{transform:scale(0);}
+  50%{transform:scale(1.5);}
+  100%{transform:scale(1); opacity:0;}
+}
+</style>
+</head>
+<body>
+
+<!-- Intro -->
+<div id="introDiv">
+  <h1 id="gameTitle">Nhấp vô là có xiền 🤑</h1>
+  <input type="text" id="playerName" placeholder="Nhập tên của bạn">
+  <br>
+  <button id="startBtn">Bắt đầu</button>
+</div>
+
+<!-- Game -->
+<div id="gameDiv">
+  <div id="scoreBox">Điểm: 0</div>
+  <div id="moneyBox">Tiền: 0 💰</div>
+  <div id="healthBox">Mạng: 5</div>
+</div>
+
+<!-- Shop -->
+<button id="openShopBtn">🛒</button>
+<div id="shopModal">
+  <span id="closeShop">❌</span>
+  <h3>Cửa hàng 🛒</h3>
+  <div id="shopItemsContainer"></div>
+</div>
+
+<!-- Rules -->
+<button id="openRulesBtn" style="top:10px; right:10px; position:fixed;">❔</button>
+<div id="rulesModal">
+  <span id="closeRules">❌</span>
+  <h3>Thể lệ chơi</h3>
+  <p>- Nhấn vào icon để nhận điểm</p>
+  <p>- Icon ánh sáng = 10 điểm, icon đỏ trừ ngẫu nhiên 1-200 điểm</p>
+  <p>- 5 mạng, hết mạng → game over</p>
+  <p>- Shop đổi điểm lấy tiền/skin</p>
+  <p>- Hungadmin = vô hạn điểm / tiền / mạng</p>
+</div>
+
+<!-- Game Over -->
+<div id="gameOverModal">
+  💀 Thua òi! May mắn lần sau 🍀<br>
+  <button id="replayBtn">Chơi lại 🔄</button>
+</div>
+
+<!-- Signature -->
+<div id="signatureFixed">by Hùng 💖 by Hùng 💖 by Hùng 💖</div>
+
+<script>
+// ==== Biến ====
+let playerName="", score=0, money=0, health=5, gameRunning=false;
+const iconsContainer=[];
+
+// ==== DOM ====
+const introDiv=document.getElementById("introDiv");
+const startBtn=document.getElementById("startBtn");
+const playerNameInput=document.getElementById("playerName");
+const gameDiv=document.getElementById("gameDiv");
+const scoreBox=document.getElementById("scoreBox");
+const moneyBox=document.getElementById("moneyBox");
+const healthBox=document.getElementById("healthBox");
+const openShopBtn=document.getElementById("openShopBtn");
+const shopModal=document.getElementById("shopModal");
+const closeShop=document.getElementById("closeShop");
+const shopItemsContainer=document.getElementById("shopItemsContainer");
+const openRulesBtn=document.getElementById("openRulesBtn");
+const rulesModal=document.getElementById("rulesModal");
+const closeRules=document.getElementById("closeRules");
+const gameOverModal=document.getElementById("gameOverModal");
+const replayBtn=document.getElementById("replayBtn");
+
+// ==== Shop items ====
+const shopItems=[
+{name:"Đổi 1500 điểm → 10k VNĐ",cost:1500,effect:()=>{score-=1500; money+=10000; updateUI();}},
+{name:"Đổi 3000 điểm → 20k VNĐ",cost:3000,effect:()=>{score-=3000; money+=20000; updateUI();}},
+{name:"Hồi 1 mạng",cost:50,effect:()=>{health=Math.min(5,health+1); updateUI();}},
+{name:"Icon glow",cost:100,effect:()=>{alert("Icon glow cực xinh!");}}
+];
+
+function initShop(){
+  shopItemsContainer.innerHTML="";
+  shopItems.forEach(item=>{
+    const div=document.createElement("div");
+    div.className="shopItem";
+    div.textContent=item.name+" - "+item.cost+" điểm";
+    div.onclick=()=>{
+      if(playerName.toLowerCase()==="hungadmin" || score>=item.cost){
+        if(playerName.toLowerCase()!=="hungadmin") score-=item.cost;
+        item.effect(); updateUI();
+      }else{alert("Không đủ điểm 😢");}
+    };
+    shopItemsContainer.appendChild(div);
+  });
+}
+
+// ==== Login & start ====
+startBtn.onclick=function(){
+  const name=playerNameInput.value.trim();
+  if(!name){alert("Nhập tên bạn nhé!"); return;}
+  playerName=name;
+  const data=JSON.parse(localStorage.getItem(playerName));
+  if(data){score=data.score||0; money=data.money||0; health=data.health||5;}
+  else{score=0; money=0; health=5;}
+  introDiv.style.display="none";
+  gameDiv.style.display="block";
+  gameRunning=true;
+  initShop();
+  updateUI();
+  spawnIconLoop();
+}
+
+// ==== Update UI ====
+function updateUI(){
+  scoreBox.textContent="Điểm: "+(score===Infinity?"∞":score);
+  moneyBox.textContent="Tiền: "+(money===Infinity?"∞":money)+" 💰";
+  healthBox.textContent="Mạng: "+health;
+}
+
+// ==== Game over ====
+function endGame(){
+  gameRunning=false;
+  gameOverModal.style.display="block";
+}
+
+// ==== Replay ====
+replayBtn.onclick=function(){
+  gameOverModal.style.display="none";
+  health=5; score=0; money=0;
+  updateUI();
+  gameRunning=true;
+  spawnIconLoop();
+}
+
+// ==== Shop open/close ====
+openShopBtn.onclick=function(){shopModal.style.display="block"; gameRunning=false;}
+closeShop.onclick=function(){shopModal.style.display="none"; gameRunning=true; spawnIconLoop();}
+
+// ==== Rules open/close ====
+openRulesBtn.onclick=function(){rulesModal.style.display="block"; gameRunning=false;}
+closeRules.onclick=function(){rulesModal.style.display="none"; gameRunning=true; spawnIconLoop();}
+
+// ==== Icon spawn ====
+function spawnIconLoop(){
+  if(!gameRunning) return;
+  createIcon();
+  setTimeout(spawnIconLoop, Math.random()*1500+500);
+}
+
+function createIcon(){
+  if(!gameRunning) return;
+  const icon=document.createElement("div");
+  icon.className="icon";
+  const type=Math.random()<0.2?"⚡":"🟥"; // ⚡=10, 🟥 trừ điểm
+  icon.textContent=type;
+  icon.style.left=Math.random()*(window.innerWidth-50)+"px";
+  icon.style.top="-50px";
+  document.body.appendChild(icon);
+
+  let fall=0;
+  const interval=setInterval(()=>{
+    if(!gameRunning){clearInterval(interval); return;}
+    fall+=5;
+    icon.style.top=fall+"px";
+    if(fall>window.innerHeight){
+      clearInterval(interval);
+      icon.remove();
+      if(type==="⚡"){health--; updateUI(); if(health<=0) endGame();}
+    }
+  },30);
+
+  icon.onclick=function(){
+    if(!gameRunning) return;
+    if(type==="⚡"){
+      score+=10;
+      icon.remove();
+      createConfetti();
+    } else{
+      const lost=Math.floor(Math.random()*200)+1;
+      score-=lost;
+      health--; updateUI();
+      const popup=document.createElement("div");
+      popup.className="lostPoint";
+      popup.textContent="-"+lost;
+      popup.style.left=icon.offsetLeft+"px";
+      popup.style.top=icon.offsetTop+"px";
+      document.body.appendChild(popup);
+      setTimeout(()=>popup.remove(),1000);
+      if(health<=0) endGame();
+      icon.remove();
+    }
+    updateUI();
+  }
+}
+
+// ==== Confetti ====
+function createConfetti(){
+  for(let i=0;i<20;i++){
+    const conf=document.createElement("div");
+    conf.textContent="🎉";
+    conf.style.position="fixed";
+    conf.style.left=Math.random()*window.innerWidth+"px";
+    conf.style.top="-20px";
+    conf.style.fontSize=(20+Math.random()*20)+"px";
+    conf.style.opacity=Math.random();
+    document.body.appendChild(conf);
+    setTimeout(()=>{conf.style.top=window.innerHeight+50+"px";},10);
+    setTimeout(()=>{conf.remove();},2100);
+  }
+}
+
+</script>
+</body>
+</html>
